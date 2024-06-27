@@ -1,0 +1,20 @@
+# Ignore datasets directory
+**/datasets/
+
+# Ignore __pycache__ directory
+**/__pycache__/
+
+# Ignore raw_sample_set directory
+r**/aw_sample_set/
+
+# Ignore results directory
+**/results/
+
+# Ignore wandb directory
+**/wandb/
+
+# Ignore speechbrain directory
+**/speechbrain/
+
+# Ignore all .swp files
+**/*.swp
