@@ -50,9 +50,7 @@ def split_dataset(dataset_path, statistics_path):
     test_split.to_csv(f"{test_path}/metadata.csv", index=False)
     valid_split.to_csv(f"{valid_path}/metadata.csv", index=False)
 
-    
-    # TODO: check if the removal of index cause the issues
-    # Remove test and validation data from the original metadata
+        # Remove test and validation data from the original metadata
     remaining_metadata = metadata[~metadata['spk_id'].isin(test_speakers + valid_speakers)]
     remaining_metadata.to_csv(f"{train_path}/metadata.csv", index=False)
 

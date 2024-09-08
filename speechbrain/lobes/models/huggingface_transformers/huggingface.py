@@ -200,6 +200,7 @@ class HFTransformersInterface(nn.Module):
                 config=self.config,
                 cache_dir=save_path,
                 quantization_config=self.quantization_config,
+                attn_implementation="sdpa",
                 **kwargs,
             )
 

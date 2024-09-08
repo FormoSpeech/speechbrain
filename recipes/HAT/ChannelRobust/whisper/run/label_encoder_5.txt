@@ -1,0 +1,7 @@
+'PCmic' => 0
+'android' => 1
+'lavalier' => 2
+'H8x' => 3
+'condenser' => 4
+================
+'starting_index' => 0

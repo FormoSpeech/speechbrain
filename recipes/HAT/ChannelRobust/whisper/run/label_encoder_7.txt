@@ -1,0 +1,9 @@
+'PCmic' => 0
+'android' => 1
+'lavalier' => 2
+'H8x' => 3
+'H8y' => 4
+'iOS' => 5
+'condenser' => 6
+================
+'starting_index' => 0

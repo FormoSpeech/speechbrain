@@ -1,0 +1,4 @@
+- test_cr_distance.yaml is for check the distance of webcam embeddings and condenser embeddings
+- with_one.yaml is for single channel asr of hat
+- with_one_tat.yaml is for single channel asr of tat
+- with_one_cr.yaml is for single channel asr with channels go though crNet

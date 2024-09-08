@@ -1,0 +1,73 @@
+defaults:
+  - _self_
+  - override hydra/hydra_logging: none
+  - override hydra/job_logging: none
+
+hydra:
+  run:
+    dir: .
+  output_subdir: null
+
+lang_code: htia
+n_jobs: 36
+verbose: true
+trigger_level: 5.0
+boot_time: 0.2
+
+corpus_name: 
+  - hat_asr_aligned/train
+  - hat_asr_aligned/valid
+  - hat_asr_aligned/test
+  
+corpus_root: /mnt/md0/FormoData/${corpus_name}
+dataset_dir: ${corpus_root}/dataset
+raw_dataset_dir: ${corpus_root}/raw_dataset
+stats_dir: ${corpus_root}/stats
+wav_root: ${corpus_root}/wav/{}
+wav_trimmed_root: ${corpus_root}/wav_trimmed/{}
+
+source_paths:
+  sixian_reading: ${corpus_root}/HAT-ASR-Sixian-Reading
+  hailu_reading: ${corpus_root}/HAT-ASR-Hailu-Reading
+  nansixian_reading: ${corpus_root}/HAT-ASR-Nan-Sixian-Reading
+  sixian_broadcast: ${corpus_root}/HAT-ASR-Sixian-Broadcast
+
+dialect_map:
+  sixian_reading: sixian
+  hailu_reading: hailu
+  nansixian_reading: nansixian
+  sixian_broadcast: sixian
+
+channel_types_for_asr:
+  - condenser
+
+channel_types:
+  - android
+  - iOS
+  - PCmic
+  - webcam
+  - condenser
+  - lavalier
+  - H8x
+  - H8y
+
+formolexicon_root: /mnt/md1/FormoLexicon/release
+
+delimiters: ${formolexicon_root}/delimiters.json
+replaced_words: ${formolexicon_root}/replaced_words_${lang_code}.json
+preserved_words: ${formolexicon_root}/preserved_words_${lang_code}.json
+v2f:
+  - ${formolexicon_root}/v2f_${lang_code}.json
+  - ${formolexicon_root}/v2f_goyu.json
+
+lexicon_paths:
+  hakka: ${formolexicon_root}/lexicon_htia_{}_c.json
+  english: ${formolexicon_root}/lexicon_eng.json
+
+max_eps_length: 0.15
+source_clean_dir: /mnt/md1/kaldi/egs/formokaldi/htia_raw/tasks/cln_hat_asr/{}/ds_0.7/fa
+wav_clean_dir: ${corpus_root}/wav_clean/{}
+
+hf_cfg:
+  # hat_asr_channel: ${raw_dataset_dir}
+  hat_asr_condenser: ${dataset_dir}

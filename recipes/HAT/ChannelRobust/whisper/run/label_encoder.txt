@@ -1,0 +1,10 @@
+'android' => 0
+'iOS' => 1
+'PCmic' => 2
+'condenser' => 3
+'lavalier' => 4
+'H8x' => 5
+'H8y' => 6
+'webcam' => 7
+================
+'starting_index' => 0

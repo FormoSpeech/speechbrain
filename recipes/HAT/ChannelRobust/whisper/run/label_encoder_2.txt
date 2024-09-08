@@ -1,0 +1,4 @@
+'webcam' => 0
+'condenser' => 1
+================
+'starting_index' => 0

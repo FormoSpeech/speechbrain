@@ -1,0 +1,194 @@
+# ################################
+# Model: Whisper (Encoder-Decoder) + NLL
+# Augmentation: TimeDomainSpecAugment
+# Authors: Adel Moumen 2022 & 2024, Titouan Parcollet 2022
+# ################################
+
+# outchannel: android, condenser, H8x, H8y, iOS, lavalier, PCmic, webcam
+channel: ""
+project: ""
+
+grl_weight: 0.5
+clf_classes: 7
+
+gaussian_blur: False
+condenser_remixed: True
+# Seed needs to be set at top of yaml, before objects with parameters are made
+seed: 06291800
+__set_seed: !apply:torch.manual_seed [!ref <seed>]
+output_folder: !ref results/whisper/crNet-0903_enc_clf_classes_<clf_classes>_gs_<gaussian_blur>_<project>_condenser_remixed_<condenser_remixed>
+output_channel_folder: !ref <output_folder>/
+# output_cer_folder: !ref <output_folder>/cer_result
+save_folder: !ref <output_folder>/save
+train_log: !ref <output_folder>/train_log.txt
+
+# URL for the biggest Fairseq english whisper model.
+whisper_hub: openai/whisper-tiny
+whisper_folder: !ref <save_folder>/whisper_checkpoint
+
+# Normalization for english, we cancel this since we use hat language
+normalized_transcripts: False
+
+# Data files, just for test, need to be modified
+data_folder: /mnt/user_forbes/datasets/sixian_reading
+skip_prep: False
+# train_csv: !ref <data_folder>/train/metadata_no_<channel>_sample.csv
+train_csv: !ref <data_folder>/train/_metadata_no_webcam.csv
+
+# only train needs _meta
+# valid_csv: !ref <data_folder>/train/metadata_no_<channel>_sample.csv
+valid_csv: !ref <data_folder>/valid/metadata_no_webcam.csv
+
+test_csv: 
+    - !ref <data_folder>/test/metadata_no_webcam.csv
+    # - !ref <data_folder>/test/metadata_no_<channel>.csv
+    # - !ref <data_folder>/test/metadata_android.csv
+    # - !ref <data_folder>/test/metadata_H8x.csv
+    # - !ref <data_folder>/test/metadata_iOS.csv
+    # - !ref <data_folder>/test/metadata_PCmic.csv
+    # - !ref <data_folder>/test/metadata_condenser.csv
+    # - !ref <data_folder>/test/metadata_H8y.csv
+    # - !ref <data_folder>/test/metadata_lavalier.csv
+    # - !ref <data_folder>/test/metadata_webcam.csv 
+ckpt_interval_minutes: 10 # save checkpoint every N min
+
+clf_ckpt: False
+
+############################## Training Parameters #############################
+
+batch_size: 35
+test_batch_size: 35
+grad_accumulation_factor: 2
+temperature: 0.07
+
+# Decoding parameters
+min_decode_ratio: 0.0
+max_decode_ratio: 1.0
+test_beam_size: 8
+
+freeze_encoder: True
+freeze_decoder: True
+
+# at most 4
+freeze_blocks: 0
+
+number_of_epochs: 10
+weight_decay: 0.01
+lr_whisper: 1e-4
+
+# TODO: check here for 0.1 of all steps if you modify the epoches
+warmup_steps: 10654 # 1522 for a single channel, 1522*7 channels to be 10654
+max_grad_norm: 2.0
+
+# TODO: need to be ascending
+sorting: ascending
+precision: bf16 # bf16, 16 or fp32
+eval_precision: bf16
+sampling_rate: 16_000
+
+####################### Model Parameters #######################################
+
+train_loader_kwargs:
+    batch_size: !ref <batch_size>
+
+valid_loader_kwargs:
+    batch_size: !ref <test_batch_size>
+
+test_loader_kwargs:
+    batch_size: !ref <test_batch_size>
+
+epoch_counter: !new:speechbrain.utils.epoch_loop.EpochCounter
+    limit: !ref <number_of_epochs>
+
+output_embedding_size: 384
+
+############################## Models ##########################################
+
+# TODO: check here
+
+whisper: !new:speechbrain.lobes.models.huggingface_transformers.whisper.Whisper
+    source: !ref <whisper_hub>
+    freeze_encoder: True
+    freeze_decoder: True
+    freeze_blocks: 0
+    save_path: !ref <whisper_folder>
+    output_all_hiddens: True
+    language: "chinese"
+    task: "transcribe"
+    sampling_rate: !ref <sampling_rate>
+
+# crNet: !new:module.conformer.Transformer
+crNet: !new:module.transformer.Transformer
+
+mse: &mse
+    !new:module.contrastive_loss.MSELoss
+
+channel_classifier: !new:module.channel_classifier.ChannelClassifier
+    input_size: !ref <output_embedding_size>
+    lin_blocks: 1
+    lin_neurons: 192
+    out_neurons: !ref <clf_classes>
+    
+# only in m3
+ECAPA_pooling: &ECAPA_pooling
+    !new:module.ECAPA_TDNN.ECAPA_TDNN
+    input_size: 384
+    lin_neurons: !ref <output_embedding_size>
+
+GRL: !new:module.grl.GradientReversalLayer
+    grl_weight: !ref <grl_weight>
+
+log_softmax: !new:speechbrain.nnet.activations.Softmax
+    apply_log: True
+
+nll_loss: !name:speechbrain.nnet.losses.nll_loss
+
+compute_cost: !new:speechbrain.nnet.losses.LogSoftmaxWrapper
+    loss_fn: !new:speechbrain.nnet.losses.AdditiveAngularMargin
+        margin: 0.2
+        scale: 30
+
+modules:
+    whisper: !ref <whisper>
+    mse: !ref <mse>
+    crNet: !ref <crNet>
+
+############################## Decoding & optimiser ############################
+
+whisper_opt_class: !name:torch.optim.AdamW
+    lr: !ref <lr_whisper>
+    weight_decay: !ref <weight_decay>
+
+valid_search: !new:speechbrain.decoders.seq2seq.S2SWhisperGreedySearcher
+    model: !ref <whisper>
+    min_decode_ratio: !ref <min_decode_ratio>
+    max_decode_ratio: !ref <max_decode_ratio>
+
+test_search: !new:speechbrain.decoders.seq2seq.S2SWhisperBeamSearcher
+    module: [!ref <whisper>]
+    min_decode_ratio: !ref <min_decode_ratio>
+    max_decode_ratio: !ref <max_decode_ratio>
+    beam_size: !ref <test_beam_size>
+
+lr_annealing_whisper: !new:speechbrain.nnet.schedulers.NoamScheduler
+    lr_initial: !ref <lr_whisper>
+    n_warmup_steps: !ref <warmup_steps>
+
+############################## Logging and Pretrainer ##########################
+
+checkpointer: !new:speechbrain.utils.checkpoints.Checkpointer
+    checkpoints_dir: !ref <save_folder>
+    recoverables:
+        scheduler_whisper: !ref <lr_annealing_whisper>
+        counter: !ref <epoch_counter>
+        crNet: !ref <crNet>
+        channel_classifier: !ref <channel_classifier>
+
+
+
+train_logger: !new:speechbrain.utils.train_logger.FileTrainLogger
+    save_file: !ref <train_log>
+
+error_stats: !name:speechbrain.utils.metric_stats.MetricStats
+    metric: !name:speechbrain.nnet.losses.classification_error
+        reduction: batch
